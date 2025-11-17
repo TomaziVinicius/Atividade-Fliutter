@@ -3,6 +3,7 @@ import '../../../core/supabase_client.dart';
 import 'package:zapizapi/ui/widgets/custom_button.dart';
 import 'package:zapizapi/ui/widgets/custom_input.dart';
 import 'package:zapizapi/ui/widgets/custom_text_button.dart';
+import '../home/home_page.dart';
 
 // TODO(gustavo96ma): Implementar sistema de rotas das páginas
 // TODO: Extrair o código para a login_screen
@@ -11,7 +12,7 @@ import 'package:zapizapi/ui/widgets/custom_text_button.dart';
 // TODO: Login Social
 // TODO: Implementar awesome_lints
 
-class LoginPage extends StatefulWidget{
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
@@ -23,24 +24,36 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   Future<void> _signIn() async {
-    try{
+    try {
       final email = emailController.text.trim();
       final password = passwordController.text;
+
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Insira seu email e senha')),
+        );
+        return;
+      }
 
       final res = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if(res.session != null && mounted){
+      if (res.session != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login Realizado com Sucesso')),
+          const SnackBar(content: Text('Login realizado com sucesso!')),
         );
+        Navigator.of(context).pushReplacementNamed('/home');
       }
-    } catch (e) {
+    } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: $e')),
+        SnackBar(content: Text('Erro de autenticação: ${e.message}')),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }
   }
 
@@ -54,7 +67,9 @@ class _LoginPageState extends State<LoginPage> {
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: SizedBox(
-                  width: constraints.maxWidth > 768 ? 768 : constraints.maxWidth,
+                  width: constraints.maxWidth > 768
+                      ? 768
+                      : constraints.maxWidth,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
