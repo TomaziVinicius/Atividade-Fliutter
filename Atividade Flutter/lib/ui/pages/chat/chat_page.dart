@@ -47,23 +47,55 @@ class _ChatPageState extends State<ChatPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Usuário não autenticado')));
+      return;
+    }
+
     final newMessage = {
-      'chat_id': widget.chatId,
-      'sender_id': currentUserId ?? 'unknown',
+      'chat_id': widget.chatId, // UUID da conversa
+      'sender_id':
+          uid, // UUID do usuário autenticado (sem converter para bigint)
       'content': text,
-      'created_at': DateTime.now().toIso8601String(),
+      // NÃO inclua 'id' — deixe o banco gerar
     };
 
+    // UI otimista
     setState(() => messages.add(newMessage));
     _controller.clear();
     _scrollToBottom();
 
     try {
-      await supabase.from('messages').insert(newMessage);
-    } catch (e) {
+      final res = await supabase.from('messages').insert([
+        newMessage,
+      ]).select(); // retorna o registro inserido (com id)
+
+      // debug: verifique resposta/erro
+      if (res is List && res.isNotEmpty) {
+        final inserted = Map<String, dynamic>.from(res.first);
+        setState(() {
+          if (messages.isNotEmpty) messages.removeLast();
+          messages.add(inserted);
+        });
+        _scrollToBottom();
+      } else {
+        // reverte e mostra erro
+        if (messages.isNotEmpty) messages.removeLast();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Inserção retornou vazio')),
+        );
+      }
+    } catch (e, st) {
+      // reverte UI e loga erro
+      if (messages.isNotEmpty) messages.removeLast();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro ao enviar: $e')));
+      // imprimir no console para debugar
+      print('Insert error: $e\n$st');
     }
   }
 
