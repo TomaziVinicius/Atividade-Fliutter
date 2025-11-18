@@ -19,15 +19,10 @@ class CustomInput extends StatelessWidget {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (context, value, child) {
-        // debug: print controller empty state
-        // print('[DEBUG] controller: ${value.text.isEmpty}');
         return TextFormField(
           controller: controller,
+          obscureText: obscureText,
           decoration: InputDecoration(
-            // border: OutlineInputBorder(
-            //   borderRadius: BorderRadius.circular(8.0),
-            //   borderSide: BorderSide(color: Colors.red, width: 2.0),
-            // ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(
@@ -37,15 +32,14 @@ class CustomInput extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.blue, width: 2.5),
+              borderSide: const BorderSide(color: Colors.blue, width: 2.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.red, width: 2.5),
+              borderSide: const BorderSide(color: Colors.red, width: 2.5),
             ),
             labelText: label,
-            hint: Text(hint),
-            fillColor: Colors.red,
+            hintText: hint,
           ),
         );
       },

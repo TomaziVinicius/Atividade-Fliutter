@@ -4,7 +4,6 @@ import '../../../core/supabase_client.dart';
 import 'package:zapizapi/ui/widgets/custom_button.dart';
 import 'package:zapizapi/ui/widgets/custom_input.dart';
 import 'package:zapizapi/ui/widgets/custom_text_button.dart';
-import '../home/home_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
