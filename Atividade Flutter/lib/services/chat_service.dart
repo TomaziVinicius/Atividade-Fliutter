@@ -72,26 +72,32 @@ class ChatService {
   }
 
   static Future<void> sendImageMessage({
-    required String conversationId,
-    required Uint8List bytes,
-    required String fileName,
-  }) async {
-    final user = _db.auth.currentUser;
-    if (user == null) throw AuthException('Usuário não autenticado');
+  required String conversationId,
+  required Uint8List bytes,
+  required String fileName,
+}) async {
+  final user = _db.auth.currentUser;
+  if (user == null) throw AuthException('Usuário não autenticado');
 
-    final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}-$fileName';
+  final path =
+      '${user.id}/${DateTime.now().millisecondsSinceEpoch}-$fileName';
 
-    await _db.storage.from('chat_uploads').uploadBinary(path, bytes);
+  await _db.storage
+      .from('chat_uploads')
+      .uploadBinary(path, bytes);
 
-    final fileUrl = _db.storage.from('chat_uploads').getPublicUrl(path);
+  final fileUrl = _db.storage
+      .from('chat_uploads')
+      .getPublicUrl(path);
 
-    await _db.from('messages').insert({
-      'conversation_id': conversationId,
-      'sender_id': user.id,
-      'type': 'image',
-      'file_url': fileUrl,
-    });
-  }
+  await _db.from('messages').insert({
+    'conversation_id': conversationId,
+    'sender_id': user.id,
+    'type': 'image',
+    'file_url': fileUrl,
+  });
+}
+
     static Future<void> editMessage({
     required String messageId,
     required String content,

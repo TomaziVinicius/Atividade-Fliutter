@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:zapizapi/services/chat_service.dart';
 import 'package:zapizapi/ui/pages/chat/group_management_page.dart';
 import 'package:zapizapi/core/supabase_client.dart'; // usuario logado
@@ -20,6 +21,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   // emojis disponíveis
   final List<String> _emojiList = ['👍', '❤️', '😂', '🔥', '😢', '😮'];
@@ -122,6 +124,39 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  // escolher imagem e enviar
+  Future<void> _pickAndSendImage() async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70, // compressão leve
+      );
+
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+
+      // Limite 20MB
+      const maxBytes = 20 * 1024 * 1024;
+      if (bytes.length > maxBytes) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Arquivo maior que 20MB.')),
+        );
+        return;
+      }
+
+      await ChatService.sendImageMessage(
+        conversationId: widget.conversationId,
+        bytes: bytes,
+        fileName: file.name,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao enviar imagem: $e')),
+      );
+    }
+  }
+
   // popup de reações ao segurar uma mensagem
   void _showReactionsPopup(String messageId) {
     showModalBottomSheet(
@@ -167,18 +202,21 @@ class _ChatPageState extends State<ChatPage> {
     showModalBottomSheet(
       context: context,
       builder: (_) {
+        final isText = (msg['type'] ?? 'text') == 'text';
+
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Editar mensagem'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _openEditDialog(msgId, msg['content'] ?? '');
-                },
-              ),
+              if (isText)
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: const Text('Editar mensagem'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openEditDialog(msgId, msg['content'] ?? '');
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.delete),
                 title: const Text('Apagar mensagem'),
@@ -314,13 +352,64 @@ class _ChatPageState extends State<ChatPage> {
                       itemBuilder: (context, index) {
                         final msg = messages[index];
                         final msgId = msg['id'];
+                        final type = (msg['type'] ?? 'text') as String;
                         final content = msg['content'] ?? '';
+                        final fileUrl = msg['file_url'] as String?;
                         final senderId = msg['sender_id'] ?? '';
                         final createdAt = msg['created_at']?.toString();
                         final messageReactions =
                             groupedReactions[msgId] ?? {};
                         final deletedAt = msg['deleted_at'];
                         final isEdited = msg['is_edited'] == true;
+
+                        Widget messageBody;
+
+                        if (deletedAt != null) {
+                          messageBody = const Text(
+                            'Mensagem apagada',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          );
+                        } else if (type == 'image' && fileUrl != null) {
+                          messageBody = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  fileUrl,
+                                  width: 220,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) {
+                                    return const Text(
+                                      'Erro ao carregar imagem',
+                                      style: TextStyle(color: Colors.red),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        } else {
+                          messageBody = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(content),
+                              if (isEdited)
+                                const Text(
+                                  '(editada)',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                            ],
+                          );
+                        }
 
                         return GestureDetector(
                           onLongPress: () => _showReactionsPopup(msgId),
@@ -348,26 +437,10 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                   const SizedBox(height: 2),
 
-                                  if (deletedAt != null) ...[
-                                    const Text(
-                                      'Mensagem apagada',
-                                      style: TextStyle(
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    Text(content),
-                                    if (isEdited)
-                                      const Text(
-                                        '(editada)',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                  ],
+                                  // conteúdo (texto ou imagem ou apagada)
+                                  messageBody,
 
+                                  // reações
                                   if (messageReactions.isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Wrap(
@@ -419,6 +492,10 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.image),
+                    onPressed: _pickAndSendImage,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _messageController,
