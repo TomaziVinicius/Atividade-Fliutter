@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/supabase_client.dart';
 import 'package:zapizapi/ui/widgets/custom_button.dart';
 import '../auth/login_page.dart';
+import '../chat/chat_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -94,7 +95,15 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             onTap: () {
-              // Navegar para chat detalhado
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChatPage(
+                    chatId: index.toString(),
+                    chatName: chat['name'],
+                    avatar: chat['avatar'],
+                  ),
+                ),
+              );
             },
           );
         },
