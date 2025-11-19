@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:zapizapi/core/supabase_client.dart';
 import 'package:zapizapi/ui/pages/chat/chat_page.dart';
 import 'package:zapizapi/services/profile_service.dart';
+import 'package:zapizapi/ui/pages/chat/user_search_page.dart'; // <-- NOVO IMPORT
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,8 +20,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // marca usuário como online
-    ProfileService.setOnlineStatus(true);
     _loadConversations();
   }
 
@@ -110,12 +109,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _signOut() async {
-    // marca usuário como offline e grava last_seen
-    await ProfileService.setOnlineStatus(false);
     await supabase.auth.signOut();
   }
 
-  /// Nova conversa direta
+  /// Nova conversa direta (modo antigo: digitar nome exato)
   Future<void> _startNewConversation() async {
     final user = supabase.auth.currentUser;
     if (user == null) {
@@ -328,6 +325,16 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadConversations,
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),         // <-- NOVO BOTÃO
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const UserSearchPage(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
